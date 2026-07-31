@@ -4,6 +4,10 @@ require("dotenv").config()
 const i18next = require("i18next")
 const backend = require("i18next-fs-backend")
 const middleware = require("i18next-http-middleware")
+const cors = require("cors")
+const morgan = require("morgan")
+
+const categoryRouter = require("./routes/category.route")
 
 i18next
     .use(backend)
@@ -19,6 +23,16 @@ const port = process.env.PORT
 const api= process.env.API
 
 app.use(middleware.handle(i18next))
+app.use(express.json())
+app.use(cors({
+    origin: ["http://localhost:3000", "https://mydomain.com"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept-Language"],
+    credentials: true
+}))
+app.use(morgan("tiny"))
+
+app.use(`${api}/categories`, categoryRouter)
 
 app.get(`${api}/health`, (req, res) => {
     res.send(req.t("validationFailed"))
@@ -28,5 +42,5 @@ mongoose.connect(process.env.CONNECT_STRING).then(() => console.log("Connected t
 
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost${port}`)
+    console.log(`Server running at http://localhost:${port}`)
 })
