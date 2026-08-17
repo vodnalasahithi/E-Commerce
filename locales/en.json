@@ -4,5 +4,19 @@
     "noCategoriesFound": "No categories found",
     "categoryNotFound": "Category not found",
     "categoryDeletedSuccessfully": "Category deleted successfully",
-    "categoryUpdatedSuccessfully": "Category updated successfully"
+    "categoryUpdatedSuccessfully": "Category updated successfully",
+    "userRegisteredSuccessfully" : "User registered successfully",
+    "enterValidEmail": "Email is required",
+    "enterValidUserName":"User name is required",
+    "enterCityName":"City name is required",
+    "enterValidPostalCode": "Postal code is required",
+    "enterValidAddressLine1": "Address line is required",
+    "enterValidPhoneNumber": "Phone number is required",
+    "validPhoneNumber": "Enter valid phone number",
+    "emailAlreadyExists": "Email already exists",
+    "incorrectPassword": "Password is not correct.",
+    "loginSuccessful": "Login is successfull.",
+    "userNotFound": "User not found.",
+    "passwordMinLength": "Password must be minimum 6 characters.",
+    "userUpdated": "User details updated successfully."
 }
