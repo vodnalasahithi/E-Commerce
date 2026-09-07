@@ -18,5 +18,19 @@
     "loginSuccessful": "Login is successfull.",
     "userNotFound": "User not found.",
     "passwordMinLength": "Password must be minimum 6 characters.",
-    "userUpdated": "User details updated successfully."
+    "userUpdated": "User details updated successfully.",
+    "productCreated": "Product created successfully.",
+    "categoryNameValidation": "Category name is required and should be at least 3 characters long",
+    "noProducts": "No products found",
+    "noProductFound" : "No product found",
+    "productNotFound": "Product not found",
+    "productDeletedSuccessfully": "Product deleted successfully.",
+    "orderItemsRequired": "Order items are required and must be an array.",
+    "orderItemValidation" :"Each order item must have product, quantity.",
+    "invalidProcductId": "Invalid product Id.",
+    "quantityMustBeAtleast1" : "Quantity must be at least 1.",
+    "quantityMustBeWholeNumber": "Quantity must be a whole number.",
+    "productsNotFound": "Products are not found.",
+    "insufficientStock": "Insufficient stock available."
+
 }
