@@ -1,0 +1,205 @@
+import express from "express";
+import { OrderModel } from "../models/order.model.js";
+import { ProductModel } from "../models/product.model.js";
+import { handleRouteError } from "../helpers/error-handling.js";
+import { userAndAdmin } from "../middleware/roles.middleware.js";
+import mongoose from "mongoose";
+
+const router = express.Router();
+
+router.post("/", userAndAdmin, async (req, res) => {
+  try {
+    const { orderItems } = req.body;
+    const { auth: currentUser } = req;
+
+    // Validate order items
+    if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
+      return res.status(400).json({
+        message: req.t("orderItemsRequired"),
+      });
+    }
+
+    for (const item of orderItems) {
+      //validate product and qty existence
+      if (!item.product || !item.quantity) {
+        return res.status(400).send({
+          message: req.t("orderItemValidation"),
+        });
+      }
+
+      // validate if product id is a valid MongoDB ObjectId
+      if (!mongoose.Types.ObjectId.isValid(item.product)) {
+        return res.status(400).send({
+          message: req.t("invalidProcductId"),
+          invalidId: item.product,
+        });
+      }
+
+      // validate if product quantity is not a valid quantity
+      if (typeof item.quantity !== "number" || item.quantity < 1) {
+        return res.status(400).send({
+          message: req.t("quantityMustBeAtleast1"),
+        });
+      }
+
+      // 1.5
+      // Validate that quantity is a whole number (no decimal)
+      if (!Number.isInteger(item.quantity)) {
+        return res.status(400).send({
+          message: req.t("quantityMustBeWholeNumber"),
+          invalidQuantity: item.quantity,
+        });
+      }
+    }
+
+    // Verify if product Ids exist in DB or not
+    const productIds = orderItems.map((item) => item.product);
+
+    const products = await ProductModel.find({ _id: { $in: productIds } });
+
+    if (products.length !== productIds.length) {
+      return res.status(404).send({
+        message: req.t("productsNotFound"),
+      });
+    }
+    const orderItemsWithPrices = [];
+
+    for (const item of orderItems) {
+      //Find the product
+      const product = products.find((p) => p._id.toString() === item.product);
+
+      if (product.countInStock < item.quantity) {
+        return res.status(400).send({
+          message: req.t("insufficientStock"),
+          productName: product.title,
+          availableStock: product.countInStock,
+          requestedQuantity: item.quantity,
+        });
+      }
+
+      orderItemsWithPrices.push({
+        product: item.product,
+        quantity: item.quantity,
+        price: product.price,
+      });
+    }
+
+    const totalPrice = orderItemsWithPrices.reduce((total, item) => {
+      return total + item.price * item.quantity;
+    }, 0);
+
+    const newOrder = new OrderModel({
+      orderItems: orderItemsWithPrices,
+      user: currentUser.id,
+      totalPrice,
+    });
+
+    const savedOrder = await newOrder.save();
+    // Update product stock
+    for (const item of orderItemsWithPrices) {
+      await ProductModel.findByIdAndUpdate(item.product, {
+        $inc: {
+          countInStock: -item.quantity,
+        },
+      });
+    }
+
+    const populatedOrder = await OrderModel.findById(savedOrder._id)
+      .populate(
+        "user",
+        "userName email phoneNumber city postalCode addressLine1 addressLine2",
+      )
+      .populate(
+        "orderItems.product",
+        "title price images countInStock rating views",
+      );
+
+    res.status(201).send({
+      message: req.t("orderCreatedSuccessfully"),
+      data: populatedOrder,
+    });
+  } catch (error) {
+    handleRouteError(error, res);
+  }
+});
+
+router.get("/", async (req, res) => {
+  try{
+
+    const {auth: currentUser} = req;
+    const isAdmin = currentUser.role === "admin";
+
+    // Pagination params
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Search param
+    const search = req.query.search || "";
+    const filter = {}
+
+      if(!isAdmin) {
+        filter.user = currentUser.id
+      }
+
+      if(search) {
+        filter.$or = [
+          {status: {$regex: search, $options: "i"}}
+        ]
+      }
+
+      const skip = (page-1) * limit;
+      const totalOrders = await OrderModel.countDocuments(filter)
+const orderList = await OrderModel.find(filter)
+      .sort({date: -1})
+      .skip(skip)
+      .limit(limit);
+
+      const totalPages = Math.ceil(totalOrders /limit)
+
+      res.send({
+        data: orderList,
+        pagination : {
+          currentPage: page,
+          totalPages,
+          totalOrders,
+          limit,
+          hasNextPage : page < totalPages,
+          hasPrevPage : page > 1
+        },
+        filter : {
+          search : search,
+        }
+      })
+
+  }catch(error) {
+    handleRouteError(error, res);
+
+  }
+})
+
+router.get("/:id", async(req, res) => {
+  try{
+    const {id} = req.params;
+
+    const order = await OrderModel.findById(id)
+     .populate(
+        "user",
+        "userName email phoneNumber city postalCode addressLine1 addressLine2",
+      )
+      .populate(
+        "orderItems.product",
+        "title price images countInStock rating views",
+      );
+
+      if(!order) {
+        return res.status(404).send({message: req.t("orderNotFound")})
+      }
+
+      res.send(order);
+
+  }catch(error) {
+    handleRouteError(error, res);
+
+  }
+})
+export default router;
